@@ -22,16 +22,16 @@ async def on_message(message):
 
   print(f'Message in channel {message.channel.name}, category {message.channel.category.name}!')
   if message.content == '#BotCH setup':
-    print(f'Setup for {message.guild}!')
-    await message.channel.send('Setting up structure for ' + str(message.guild))
+    await message.channel.send(f'Setting up structure for {str(message.guild)}')
     cat = await message.guild.create_category(CATEGORY)
-    await cat.create_text_channel('general')
+    # Create a private "#control" channel for the storyteller and the bot
     secret_overwrites = {
       message.guild.default_role: discord.PermissionOverwrite(read_messages=False),
       client.user: discord.PermissionOverwrite(read_messages=True),
       message.author: discord.PermissionOverwrite(read_messages=True)
     }
     await cat.create_text_channel('control', overwrites=secret_overwrites)
+    await cat.create_text_channel('general')
     await cat.create_voice_channel('Lobby')
     for room in ROOMS:
       await cat.create_voice_channel(room)
@@ -46,32 +46,30 @@ async def on_message(message):
       await cat.delete()
     
     if message.content == '#gather':
+      # Gather all players back into the lobby.
+      # Good to break up private discussions and get people to vote.
       await message.channel.send('Gathering up stragglers')
       stragglers = []
       lobby = None
       for room in message.channel.category.voice_channels:
         if room.name == 'Lobby':
-          print(f'Found the lobby with members {room.members}')
           lobby = room
         else:
-          print(f'Found room {room.name} with members {room.members}')
-          if len(room.members) != 0:            
-            stragglers += room.members
+          stragglers += room.members
       if len(stragglers) == 0:
         await message.channel.send('No stragglers found')
       else:
-        await message.channel.send('Found ' + str(len(room.members)) + ' stragglers in room ' + room.name)
         for player in stragglers:
-          await player.edit(mute=True, voice_channel=lobby, reason = 'BotCH: gathering players back into Lobby')
+          # Server mute and move the player. The server mute is there to protect a player from
+          # babbling something out while being transferred.
+          await player.edit(mute=True, voice_channel=lobby)
         await message.channel.send(f'{len(stragglers)} stragglers gathered ...')
-        time.sleep(1)
-        print(f'Found stragglers {stragglers}')
+        time.sleep(1) # wait a second before unmuting
         for player in stragglers:
-          await player.edit(mute=False, reason = 'BotCH: gathering players back into Lobby')
+          await player.edit(mute=False)
         await message.channel.send('... and unmuted')
 
     if message.content == '#night':
-
-    if message.content == '#day':
+      await message.channel.send('Moving players into private rooms for night time')
 
 client.run(TOKEN)
