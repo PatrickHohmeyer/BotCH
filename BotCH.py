@@ -10,6 +10,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 client = discord.Client()
 CATEGORY = 'Blood on the Clocktower'
 ROOMS = ['Ballroom', 'Billiard Room', 'Conservatory', 'Dining Room', 'Hall', 'Kitchen', 'Library', 'Lounge', 'Study']
+PRIVATE_ROOM_PREFIX = '_BotCH_private_'
 
 @client.event
 async def on_ready():
@@ -28,7 +29,7 @@ async def on_message(message):
     secret_overwrites = {
       message.guild.default_role: discord.PermissionOverwrite(read_messages=False),
       client.user: discord.PermissionOverwrite(read_messages=True),
-      message.author: discord.PermissionOverwrite(read_messages=True)
+      message.author: discord.PermissionOverwrite(read_messages=True),
     }
     await cat.create_text_channel('control', overwrites=secret_overwrites)
     await cat.create_text_channel('general')
@@ -71,5 +72,24 @@ async def on_message(message):
 
     if message.content == '#night':
       await message.channel.send('Moving players into private rooms for night time')
+      cat = message.channel.category
+      players = []
+      private_rooms = {}
+      for room in cat.voice_channels:
+        players += room.members
+        if room.name.startswith(PRIVATE_ROOM_PREFIX):
+          name_minus_prefix = room.name[len(PRIVATE_ROOM_PREFIX):]
+          private_rooms[name_minus_prefix] = room
+      for player in players:
+        room = private_rooms.get(player.name, None)
+        if room is None:
+          secret_overwrites = {
+            message.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
+            message.author: discord.PermissionOverwrite(view_channel=True, connect=True),
+            player: discord.PermissionOverwrite(view_channel=True, connect=True),
+          }
+          room = await cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
+        await player.move_to(room)
+      await message.channel.send('Done')
 
 client.run(TOKEN)
