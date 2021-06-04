@@ -22,8 +22,7 @@ async def on_message(message):
   if message.author == client.user:
     return
 
-  print(f'Message in channel {message.channel.name}, category {message.channel.category.name}!')
-  if message.content == '#BotCH setup':
+  if message.content == '!BotCH setup':
     is_authorized = ((message.guild.owner_id == message.author.id) or
       (discord.utils.get(message.author.roles, name=STORYTELLER_ROLE) is not None))
     if not is_authorized:
@@ -45,14 +44,14 @@ async def on_message(message):
     await message.channel.send('Created category ' + str(cat))
 
   if message.channel.category.name == CATEGORY and message.channel.name == 'control':
-    if message.content == '#cleanup':
+    if message.content == '!cleanup':
       await message.channel.send('Cleaning the game up')
       cat = message.channel.category
       for room in cat.channels:
         await room.delete()
       await cat.delete()
     
-    if message.content == '#gather':
+    if message.content == '!gather':
       # Gather all players back into the lobby.
       # Good to break up private discussions and get people to vote.
       await message.channel.send('Gathering up stragglers')
@@ -76,7 +75,7 @@ async def on_message(message):
           await player.edit(mute=False)
         await message.channel.send('... and unmuted')
 
-    if message.content == '#night':
+    if message.content == '!night':
       await message.channel.send('Moving players into private rooms for night time')
       cat = message.channel.category
       players = []
@@ -98,7 +97,7 @@ async def on_message(message):
         await player.move_to(room)
       await message.channel.send('Done')
 
-    if message.content == '#day':
+    if message.content == '!day':
       await message.channel.send('Moving players back into the lobby and unlocking rooms')
       cat = message.channel.category
       lobby = discord.utils.get(cat.voice_channels, name='Lobby')
