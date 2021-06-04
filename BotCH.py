@@ -11,6 +11,7 @@ client = discord.Client()
 CATEGORY = 'Blood on the Clocktower'
 ROOMS = ['Ballroom', 'Billiard Room', 'Conservatory', 'Dining Room', 'Hall', 'Kitchen', 'Library', 'Lounge', 'Study']
 PRIVATE_ROOM_PREFIX = '_BotCH_private_'
+STORYTELLER_ROLE = 'BotCH Storyteller'
 
 @client.event
 async def on_ready():
@@ -23,6 +24,11 @@ async def on_message(message):
 
   print(f'Message in channel {message.channel.name}, category {message.channel.category.name}!')
   if message.content == '#BotCH setup':
+    is_authorized = ((message.guild.owner_id == message.author.id) or
+      (discord.utils.get(message.author.roles, name=STORYTELLER_ROLE) is not None))
+    if not is_authorized:
+      await message.channel.send('Only the owner or a BotCH Storyteller can create a new game')
+      return
     await message.channel.send(f'Setting up structure for {str(message.guild)}')
     cat = await message.guild.create_category(CATEGORY)
     # Create a private "#control" channel for the storyteller and the bot
