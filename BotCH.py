@@ -98,4 +98,12 @@ async def on_message(message):
         await player.move_to(room)
       await message.channel.send('Done')
 
+    if message.content == '#day':
+      await message.channel.send('Moving players back into the lobby and unlocking rooms')
+      cat = message.channel.category
+      lobby = discord.utils.get(cat.voice_channels, name='Lobby')
+      for room in cat.voice_channels:
+        for player in room.members:
+          await player.move_to(lobby)
+
 client.run(TOKEN)
