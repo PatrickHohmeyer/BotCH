@@ -9,8 +9,10 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 client = discord.Client()
 CATEGORY = 'Blood on the Clocktower'
+LOBBY = 'Lobby'
 ROOMS = ['Ballroom', 'Billiard Room', 'Conservatory', 'Dining Room', 'Hall', 'Kitchen', 'Library', 'Lounge', 'Study']
 PRIVATE_ROOM_PREFIX = '_BotCH_private_'
+GATHER_MUTE_TIME = 2
 STORYTELLER_ROLE = 'BotCH Storyteller'
 
 @client.event
@@ -38,7 +40,7 @@ async def on_message(message):
     }
     await cat.create_text_channel('control', overwrites=secret_overwrites)
     await cat.create_text_channel('general')
-    await cat.create_voice_channel('Lobby')
+    await cat.create_voice_channel(LOBBY)
     for room in ROOMS:
       await cat.create_voice_channel(room)
     await message.channel.send('Created category ' + str(cat))
@@ -58,7 +60,7 @@ async def on_message(message):
       stragglers = []
       lobby = None
       for room in message.channel.category.voice_channels:
-        if room.name == 'Lobby':
+        if room.name == LOBBY:
           lobby = room
         else:
           stragglers += room.members
@@ -70,7 +72,7 @@ async def on_message(message):
           # babbling something out while being transferred.
           await player.edit(mute=True, voice_channel=lobby)
         await message.channel.send(f'{len(stragglers)} stragglers gathered ...')
-        time.sleep(1) # wait a second before unmuting
+        time.sleep(GATHER_MUTE_TIME) # wait a second before unmuting
         for player in stragglers:
           await player.edit(mute=False)
         await message.channel.send('... and unmuted')
@@ -100,7 +102,7 @@ async def on_message(message):
     if message.content == '!day':
       await message.channel.send('Moving players back into the lobby and unlocking rooms')
       cat = message.channel.category
-      lobby = discord.utils.get(cat.voice_channels, name='Lobby')
+      lobby = discord.utils.get(cat.voice_channels, name=LOBBY)
       for room in cat.voice_channels:
         for player in room.members:
           await player.move_to(lobby)
