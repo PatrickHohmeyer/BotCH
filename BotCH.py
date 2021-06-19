@@ -14,6 +14,7 @@ ROOMS = ['Ballroom', 'Billiard Room', 'Conservatory', 'Dining Room', 'Hall', 'Ki
 PRIVATE_ROOM_PREFIX = '_BotCH_private_'
 GATHER_MUTE_TIME = 2
 STORYTELLER_ROLE = 'BotCH Storyteller'
+LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for that
 
 async def setup(message):
   is_authorized = ((message.guild.owner_id == message.author.id) or
@@ -66,6 +67,7 @@ async def gather(message):
     for player in stragglers:
       await player.edit(mute=False)
     await message.channel.send('... and unmuted')
+  await lock_rooms(message.channel.category, ROOMS, message.guild.default_role)
 
 async def night(message):
   await message.channel.send('Moving players into private rooms for night time')
@@ -88,12 +90,24 @@ async def night(message):
       }
       room = await cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
     await player.move_to(room)
+  await lock_rooms(cat, ROOMS + [LOBBY], message.guild.default_role)
   await message.channel.send('Done')
+
+async def lock_rooms(cat, rooms_to_lock, default_role, can_access=False):
+  if LOCK_ROOMS_FOR_NIGHT:
+    for room in cat.voice_channels:
+      if room.name in rooms_to_lock:
+        await room.set_permissions(client.user, connect=True)
+        await room.set_permissions(default_role, connect=can_access)
+
+async def unlock_rooms(cat, rooms_to_unlock, default_role):
+  await lock_rooms(cat, rooms_to_unlock, default_role, can_access=True)
 
 async def day(message):
   await message.channel.send('Moving players back into the lobby and unlocking rooms')
   cat = message.channel.category
   lobby = discord.utils.get(cat.voice_channels, name=LOBBY)
+  await unlock_rooms(cat, ROOMS + [LOBBY], message.guild.default_role)
   for room in cat.voice_channels:
     for player in room.members:
       await player.move_to(lobby)
