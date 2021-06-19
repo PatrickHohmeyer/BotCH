@@ -84,6 +84,7 @@ async def night(message):
         message.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
         message.author: discord.PermissionOverwrite(view_channel=True, connect=True),
         player: discord.PermissionOverwrite(view_channel=True, connect=True),
+        client.user: discord.PermissionOverwrite(view_channel=True, connect=True),
       }
       room = await cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
     await player.move_to(room)
