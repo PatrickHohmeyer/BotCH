@@ -15,6 +15,7 @@ PRIVATE_ROOM_PREFIX = '_BotCH_private_'
 GATHER_MUTE_TIME = 1
 STORYTELLER_ROLE = 'BotCH Storyteller'
 LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for that
+LOCK_ROOMS_FOR_PRIVACY = True # The bot needs the "Manage Roles" permission for that
 
 async def setup(message):
   is_authorized = ((message.guild.owner_id == message.author.id) or
@@ -138,5 +139,29 @@ async def on_message(message):
       await night(message)
     if message.content == '!day':
       await day(message)
+
+async def lock_public_room_for_privacy(room, default_role):
+  await asyncio.sleep(5)
+  if room.members:
+    await room.set_permissions(default_role, connect=False)
+
+async def unlock_empty_room(room, default_role):
+  if not room.members:
+    await room.set_permissions(default_role, connect=True)
+
+@client.event
+async def on_voice_state_update(member, before, after):
+  if not LOCK_ROOMS_FOR_PRIVACY:
+    return
+
+  if after.channel == before.channel:
+    return # ignore mute / unmute events and similar things, we only want channel changes
+
+  if after.channel and after.channel.category and after.channel.category.name == CATEGORY:
+    if (after.channel.name in ROOMS):
+      asyncio.create_task(lock_public_room_for_privacy(after.channel, member.guild.default_role))
+  if before.channel and before.channel.category and before.channel.category.name == CATEGORY:
+    if before.channel.name in ROOMS and not before.channel.members:
+      await unlock_empty_room(before.channel, member.guild.default_role)
 
 client.run(TOKEN)
