@@ -32,9 +32,14 @@ async def setup(message):
   }
   await cat.create_text_channel('control', overwrites=secret_overwrites)
   await cat.create_text_channel('general')
-  await cat.create_voice_channel(LOBBY)
+  # Always allow the storyteller to join rooms and move members
+  public_overwrites = {
+    client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+    message.author: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+  }
+  await cat.create_voice_channel(LOBBY, overwrites=public_overwrites)
   for room in ROOMS:
-    await cat.create_voice_channel(room)
+    await cat.create_voice_channel(room, overwrites=public_overwrites)
   await message.channel.send('Created category ' + str(cat))
 
 async def cleanup(message):
@@ -84,9 +89,9 @@ async def night(message):
     if room is None:
       secret_overwrites = {
         message.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
-        message.author: discord.PermissionOverwrite(view_channel=True, connect=True),
+        message.author: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
         player: discord.PermissionOverwrite(view_channel=True, connect=True),
-        client.user: discord.PermissionOverwrite(view_channel=True, connect=True),
+        client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
       }
       room = await cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
     await player.move_to(room)
@@ -97,7 +102,6 @@ async def lock_rooms(cat, rooms_to_lock, default_role, can_access=False):
   if LOCK_ROOMS_FOR_NIGHT:
     for room in cat.voice_channels:
       if room.name in rooms_to_lock:
-        await room.set_permissions(client.user, connect=True)
         await room.set_permissions(default_role, connect=can_access)
 
 async def unlock_rooms(cat, rooms_to_unlock, default_role):
