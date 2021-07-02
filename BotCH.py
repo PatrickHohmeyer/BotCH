@@ -24,11 +24,21 @@ class Game:
   def __init__(self, name, cat, storyteller):
     self.name = name
     self.cat = cat
+    self.control_channel = None
     self.storyteller = storyteller
     self.player_role = cat.guild.default_role
     self.default_role = cat.guild.default_role
     self.private_rooms = {}
     Game._byCat[cat] = self
+
+  def fromCat(message):
+    cat = message.channel.category
+    game = Game._byCat.get(cat, None)
+    if game is None:
+      # This should happen if and only if the Bot was restarted after setup
+      game = Game(DEFAULT_GAME_NAME, cat, message.author)
+      game.control_channel = message.channel
+    return game
 
   async def setup(self):
     # Create a private "#control" channel for the storyteller and the bot
@@ -37,7 +47,7 @@ class Game:
       client.user: discord.PermissionOverwrite(read_messages=True),
       self.storyteller: discord.PermissionOverwrite(read_messages=True),
     }
-    await self.cat.create_text_channel('control', overwrites=secret_overwrites)
+    self.control_channel = await self.cat.create_text_channel('control', overwrites=secret_overwrites)
     await self.cat.create_text_channel('general')
     # Always allow the storyteller to join rooms and move members
     public_overwrites = {
@@ -48,12 +58,12 @@ class Game:
     for room in ROOMS:
       await self.cat.create_voice_channel(room, overwrites=public_overwrites)
 
-async def cleanup(message):
-  await message.channel.send('Cleaning the game up')
-  cat = message.channel.category
-  for room in cat.channels:
-    await room.delete()
-  await cat.delete()
+  async def cleanup(self):
+    await self.control_channel.send('Cleaning the game up')
+    for room in self.cat.channels:
+      await room.delete()
+    del Game._byCat[self.cat]
+    await self.cat.delete()
 
 async def gather(message):
   # Gather all players back into the lobby.
@@ -148,8 +158,9 @@ async def on_message(message):
     await setup(message)
 
   if message.channel.category.name == CATEGORY and message.channel.name == 'control':
+    game = Game.fromCat(message)
     if message.content == '!cleanup':
-      await cleanup(message)    
+      await game.cleanup()
     if message.content == '!gather':
       await gather(message)
     if message.content == '!night':
