@@ -16,32 +16,37 @@ GATHER_MUTE_TIME = 1
 STORYTELLER_ROLE = 'BotCH Storyteller'
 LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for that
 LOCK_ROOMS_FOR_PRIVACY = True # The bot needs the "Manage Roles" permission for that
+DEFAULT_GAME_NAME = 'Active'
 
-async def setup(message):
-  is_authorized = ((message.guild.owner_id == message.author.id) or
-    (discord.utils.get(message.author.roles, name=STORYTELLER_ROLE) is not None))
-  if not is_authorized:
-    await message.channel.send('Only the owner or a BotCH Storyteller can create a new game')
-    return
-  await message.channel.send(f'Setting up structure for {str(message.guild)}')
-  cat = await message.guild.create_category(CATEGORY)
-  # Create a private "#control" channel for the storyteller and the bot
-  secret_overwrites = {
-    message.guild.default_role: discord.PermissionOverwrite(read_messages=False),
-    client.user: discord.PermissionOverwrite(read_messages=True),
-    message.author: discord.PermissionOverwrite(read_messages=True),
-  }
-  await cat.create_text_channel('control', overwrites=secret_overwrites)
-  await cat.create_text_channel('general')
-  # Always allow the storyteller to join rooms and move members
-  public_overwrites = {
-    client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
-    message.author: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
-  }
-  await cat.create_voice_channel(LOBBY, overwrites=public_overwrites)
-  for room in ROOMS:
-    await cat.create_voice_channel(room, overwrites=public_overwrites)
-  await message.channel.send('Created category ' + str(cat))
+class Game:
+  _byCat = {}
+
+  def __init__(self, name, cat, storyteller):
+    self.name = name
+    self.cat = cat
+    self.storyteller = storyteller
+    self.player_role = cat.guild.default_role
+    self.default_role = cat.guild.default_role
+    self.private_rooms = {}
+    Game._byCat[cat] = self
+
+  async def setup(self):
+    # Create a private "#control" channel for the storyteller and the bot
+    secret_overwrites = {
+      self.default_role: discord.PermissionOverwrite(read_messages=False),
+      client.user: discord.PermissionOverwrite(read_messages=True),
+      self.storyteller: discord.PermissionOverwrite(read_messages=True),
+    }
+    await self.cat.create_text_channel('control', overwrites=secret_overwrites)
+    await self.cat.create_text_channel('general')
+    # Always allow the storyteller to join rooms and move members
+    public_overwrites = {
+      client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+      self.storyteller: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+    }
+    await self.cat.create_voice_channel(LOBBY, overwrites=public_overwrites)
+    for room in ROOMS:
+      await self.cat.create_voice_channel(room, overwrites=public_overwrites)
 
 async def cleanup(message):
   await message.channel.send('Cleaning the game up')
@@ -117,6 +122,18 @@ async def day(message):
     for player in room.members:
       await player.move_to(lobby)
   await message.channel.send('Done')
+
+async def setup(message):
+  is_authorized = ((message.guild.owner_id == message.author.id) or
+    (discord.utils.get(message.author.roles, name=STORYTELLER_ROLE) is not None))
+  if not is_authorized:
+    await message.channel.send('Only the owner or a BotCH Storyteller can create a new game')
+    return
+  await message.channel.send(f'Setting up structure for {str(message.guild)}')
+  cat = await message.guild.create_category(CATEGORY)
+  game = Game(DEFAULT_GAME_NAME, cat, message.author)
+  await game.setup()
+  await message.channel.send('Created category ' + str(cat))
 
 @client.event
 async def on_ready():
