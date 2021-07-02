@@ -69,7 +69,7 @@ async def gather(message):
       # babbling something out while being transferred.
       await player.edit(mute=True, voice_channel=lobby)
     await message.channel.send(f'{len(stragglers)} stragglers gathered ...')
-    asyncio.sleep(GATHER_MUTE_TIME) # wait a second before unmuting
+    await asyncio.sleep(GATHER_MUTE_TIME) # wait a second before unmuting
     for player in stragglers:
       await player.edit(mute=False)
     await message.channel.send('... and unmuted')
