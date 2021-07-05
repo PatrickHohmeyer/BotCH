@@ -88,7 +88,7 @@ class Game:
       for player in stragglers:
         await player.edit(mute=False)
       await self.control_channel.send('... and unmuted')
-    await lock_rooms(self.control_channel.category, ROOMS, self.default_role)
+    await self.lock_rooms(ROOMS)
 
   async def night(self):
     await self.control_channel.send('Moving players into private rooms for night time')
@@ -110,26 +110,28 @@ class Game:
         }
         room = await self.cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
       await player.move_to(room)
-    await lock_rooms(self.cat, ROOMS + [LOBBY], self.default_role)
+    await self.lock_rooms(ROOMS + [LOBBY])
     await self.control_channel.send('Done')
 
   async def day(self):
     await self.control_channel.send('Moving players back into the lobby and unlocking rooms')
     lobby = discord.utils.get(self.cat.voice_channels, name=LOBBY)
-    await unlock_rooms(self.cat, ROOMS + [LOBBY], self.default_role)
+    await self.unlock_rooms(ROOMS + [LOBBY])
     for room in self.cat.voice_channels:
       for player in room.members:
         await player.move_to(lobby)
     await self.control_channel.send('Done')
 
-async def lock_rooms(cat, rooms_to_lock, default_role, can_access=False):
-  if LOCK_ROOMS_FOR_NIGHT:
-    for room in cat.voice_channels:
-      if room.name in rooms_to_lock:
-        await room.set_permissions(default_role, connect=can_access)
+  async def lock_rooms(self, rooms_to_lock):
+    if LOCK_ROOMS_FOR_NIGHT:
+      for room in self.cat.voice_channels:
+        if room.name in rooms_to_lock:
+          await room.set_permissions(self.default_role, connect=False)
 
-async def unlock_rooms(cat, rooms_to_unlock, default_role):
-  await lock_rooms(cat, rooms_to_unlock, default_role, can_access=True)
+  async def unlock_rooms(self, rooms_to_unlock):
+    for room in self.cat.voice_channels:
+      if room.name in rooms_to_unlock:
+        await room.set_permissions(self.default_role, connect=True)
 
 async def setup(message):
   is_authorized = ((message.guild.owner_id == message.author.id) or
