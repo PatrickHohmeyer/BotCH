@@ -65,30 +65,30 @@ class Game:
     del Game._byCat[self.cat]
     await self.cat.delete()
 
-async def gather(message):
-  # Gather all players back into the lobby.
-  # Good to break up private discussions and get people to vote.
-  await message.channel.send('Gathering up stragglers')
-  stragglers = []
-  lobby = None
-  for room in message.channel.category.voice_channels:
-    if room.name == LOBBY:
-      lobby = room
+  async def gather(self):
+    # Gather all players back into the lobby.
+    # Good to break up private discussions and get people to vote.
+    await self.control_channel.send('Gathering up stragglers')
+    stragglers = []
+    lobby = None
+    for room in self.cat.voice_channels:
+      if room.name == LOBBY:
+        lobby = room
+      else:
+        stragglers += room.members
+    if len(stragglers) == 0:
+      await self.control_channel.send('No stragglers found')
     else:
-      stragglers += room.members
-  if len(stragglers) == 0:
-    await message.channel.send('No stragglers found')
-  else:
-    for player in stragglers:
-      # Server mute and move the player. The server mute is there to protect a player from
-      # babbling something out while being transferred.
-      await player.edit(mute=True, voice_channel=lobby)
-    await message.channel.send(f'{len(stragglers)} stragglers gathered ...')
-    await asyncio.sleep(GATHER_MUTE_TIME) # wait a second before unmuting
-    for player in stragglers:
-      await player.edit(mute=False)
-    await message.channel.send('... and unmuted')
-  await lock_rooms(message.channel.category, ROOMS, message.guild.default_role)
+      for player in stragglers:
+        # Server mute and move the player. The server mute is there to protect a player from
+        # babbling something out while being transferred.
+        await player.edit(mute=True, voice_channel=lobby)
+      await self.control_channel.send(f'{len(stragglers)} stragglers gathered ...')
+      await asyncio.sleep(GATHER_MUTE_TIME) # wait a second before unmuting
+      for player in stragglers:
+        await player.edit(mute=False)
+      await self.control_channel.send('... and unmuted')
+    await lock_rooms(self.control_channel.category, ROOMS, self.default_role)
 
 async def night(message):
   await message.channel.send('Moving players into private rooms for night time')
@@ -162,7 +162,7 @@ async def on_message(message):
     if message.content == '!cleanup':
       await game.cleanup()
     if message.content == '!gather':
-      await gather(message)
+      await game.gather()
     if message.content == '!night':
       await night(message)
     if message.content == '!day':
