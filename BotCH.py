@@ -113,15 +113,6 @@ class Game:
     await lock_rooms(self.cat, ROOMS + [LOBBY], self.default_role)
     await self.control_channel.send('Done')
 
-async def lock_rooms(cat, rooms_to_lock, default_role, can_access=False):
-  if LOCK_ROOMS_FOR_NIGHT:
-    for room in cat.voice_channels:
-      if room.name in rooms_to_lock:
-        await room.set_permissions(default_role, connect=can_access)
-
-async def unlock_rooms(cat, rooms_to_unlock, default_role):
-  await lock_rooms(cat, rooms_to_unlock, default_role, can_access=True)
-
 async def day(message):
   await message.channel.send('Moving players back into the lobby and unlocking rooms')
   cat = message.channel.category
@@ -131,6 +122,15 @@ async def day(message):
     for player in room.members:
       await player.move_to(lobby)
   await message.channel.send('Done')
+
+async def lock_rooms(cat, rooms_to_lock, default_role, can_access=False):
+  if LOCK_ROOMS_FOR_NIGHT:
+    for room in cat.voice_channels:
+      if room.name in rooms_to_lock:
+        await room.set_permissions(default_role, connect=can_access)
+
+async def unlock_rooms(cat, rooms_to_unlock, default_role):
+  await lock_rooms(cat, rooms_to_unlock, default_role, can_access=True)
 
 async def setup(message):
   is_authorized = ((message.guild.owner_id == message.author.id) or
