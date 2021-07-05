@@ -113,15 +113,14 @@ class Game:
     await lock_rooms(self.cat, ROOMS + [LOBBY], self.default_role)
     await self.control_channel.send('Done')
 
-async def day(message):
-  await message.channel.send('Moving players back into the lobby and unlocking rooms')
-  cat = message.channel.category
-  lobby = discord.utils.get(cat.voice_channels, name=LOBBY)
-  await unlock_rooms(cat, ROOMS + [LOBBY], message.guild.default_role)
-  for room in cat.voice_channels:
-    for player in room.members:
-      await player.move_to(lobby)
-  await message.channel.send('Done')
+  async def day(self):
+    await self.control_channel.send('Moving players back into the lobby and unlocking rooms')
+    lobby = discord.utils.get(self.cat.voice_channels, name=LOBBY)
+    await unlock_rooms(self.cat, ROOMS + [LOBBY], self.default_role)
+    for room in self.cat.voice_channels:
+      for player in room.members:
+        await player.move_to(lobby)
+    await self.control_channel.send('Done')
 
 async def lock_rooms(cat, rooms_to_lock, default_role, can_access=False):
   if LOCK_ROOMS_FOR_NIGHT:
@@ -165,7 +164,7 @@ async def on_message(message):
     if message.content == '!night':
       await game.night()
     if message.content == '!day':
-      await day(message)
+      await game.day()
 
 async def lock_public_room_for_privacy(room, default_role):
   await asyncio.sleep(5)
