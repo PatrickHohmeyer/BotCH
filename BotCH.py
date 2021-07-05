@@ -90,29 +90,28 @@ class Game:
       await self.control_channel.send('... and unmuted')
     await lock_rooms(self.control_channel.category, ROOMS, self.default_role)
 
-async def night(message):
-  await message.channel.send('Moving players into private rooms for night time')
-  cat = message.channel.category
-  players = []
-  private_rooms = {}
-  for room in cat.voice_channels:
-    players += room.members
-    if room.name.startswith(PRIVATE_ROOM_PREFIX):
-      name_minus_prefix = room.name[len(PRIVATE_ROOM_PREFIX):]
-      private_rooms[name_minus_prefix] = room
-  for player in players:
-    room = private_rooms.get(player.name, None)
-    if room is None:
-      secret_overwrites = {
-        message.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
-        message.author: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
-        player: discord.PermissionOverwrite(view_channel=True, connect=True),
-        client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
-      }
-      room = await cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
-    await player.move_to(room)
-  await lock_rooms(cat, ROOMS + [LOBBY], message.guild.default_role)
-  await message.channel.send('Done')
+  async def night(self):
+    await self.control_channel.send('Moving players into private rooms for night time')
+    players = []
+    private_rooms = {}
+    for room in self.cat.voice_channels:
+      players += room.members
+      if room.name.startswith(PRIVATE_ROOM_PREFIX):
+        name_minus_prefix = room.name[len(PRIVATE_ROOM_PREFIX):]
+        private_rooms[name_minus_prefix] = room
+    for player in players:
+      room = private_rooms.get(player.name, None)
+      if room is None:
+        secret_overwrites = {
+          self.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
+          self.storyteller: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+          player: discord.PermissionOverwrite(view_channel=True, connect=True),
+          client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+        }
+        room = await self.cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
+      await player.move_to(room)
+    await lock_rooms(self.cat, ROOMS + [LOBBY], self.default_role)
+    await self.control_channel.send('Done')
 
 async def lock_rooms(cat, rooms_to_lock, default_role, can_access=False):
   if LOCK_ROOMS_FOR_NIGHT:
@@ -164,7 +163,7 @@ async def on_message(message):
     if message.content == '!gather':
       await game.gather()
     if message.content == '!night':
-      await night(message)
+      await game.night()
     if message.content == '!day':
       await day(message)
 
