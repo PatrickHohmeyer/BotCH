@@ -94,22 +94,10 @@ class Game:
   async def night(self):
     await self.control_channel.send('Moving players into private rooms for night time')
     players = []
-    private_rooms = {}
     for room in self.cat.voice_channels:
       players += room.members
-      if room.name.startswith(PRIVATE_ROOM_PREFIX):
-        name_minus_prefix = room.name[len(PRIVATE_ROOM_PREFIX):]
-        private_rooms[name_minus_prefix] = room
     for player in players:
-      room = private_rooms.get(player.name, None)
-      if room is None:
-        secret_overwrites = {
-          self.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
-          self.storyteller_role: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
-          player: discord.PermissionOverwrite(view_channel=True, connect=True),
-          client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
-        }
-        room = await self.cat.create_voice_channel(PRIVATE_ROOM_PREFIX + player.name, overwrites=secret_overwrites)
+      room = await self.ensurePrivateRoom(player)
       await player.move_to(room)
     await self.lock_rooms(ROOMS + [LOBBY])
     await self.control_channel.send('Done')
@@ -133,6 +121,20 @@ class Game:
     for room in self.cat.voice_channels:
       if room.name in rooms_to_unlock:
         await room.set_permissions(self.default_role, connect=True)
+  
+  async def ensurePrivateRoom(self, player):
+    room_name = PRIVATE_ROOM_PREFIX + player.name
+    room = discord.utils.get(self.cat.voice_channels, name=room_name)
+    if room is None:
+      secret_overwrites = {
+        self.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
+        self.storyteller_role: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+        player: discord.PermissionOverwrite(view_channel=True, connect=True),
+        client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+      }
+      room = await self.cat.create_voice_channel(room_name, overwrites=secret_overwrites)
+    return room
+      
 
 async def setup(message):
   is_authorized = ((message.guild.owner_id == message.author.id) or
@@ -202,8 +204,12 @@ async def on_voice_state_update(member, before, after):
   if after.channel and after.channel.category and after.channel.category.name == CATEGORY:
     if (after.channel.name in ROOMS):
       asyncio.create_task(lock_public_room_for_privacy(after.channel, member.guild.default_role))
+    game = Game.fromCat(after.channel.category)
+    await game.ensurePrivateRoom(member)
   if before.channel and before.channel.category and before.channel.category.name == CATEGORY:
     if before.channel.name in ROOMS and not before.channel.members:
       await unlock_empty_room(before.channel, member.guild.default_role)
+    game = Game.fromCat(before.channel.category)
+    await game.ensurePrivateRoom(member)
 
 client.run(TOKEN)
