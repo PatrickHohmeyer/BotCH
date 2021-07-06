@@ -64,8 +64,8 @@ class Game:
       await room.delete()
     del Game._byCat[self.cat]
     await self.cat.delete()
-    # And finally remove all members from the active storyteller role
-    # Or at least, we'd love to, but Discord is annoying, as by default it does not list members of a role
+    # And finally remove the active storyteller role
+    self.storyteller_role.delete()
 
   async def gather(self):
     # Gather all players back into the lobby.
@@ -142,6 +142,7 @@ async def setup(message):
     await message.channel.send('Only the owner or a BotCH Storyteller can create a new game')
     return
   await message.channel.send(f'Setting up structure for {str(message.guild)}')
+  await message.guild.create_role(name=ACTIVE_STORYTELLER_ROLE, colour=discord.Colour.green())
   cat = await message.guild.create_category(CATEGORY)
   game = Game(DEFAULT_GAME_NAME, cat)
   await message.author.add_roles(game.storyteller_role)
@@ -149,8 +150,6 @@ async def setup(message):
   await message.channel.send('Created category ' + str(cat))
 
 async def assureStorytellerRoles(guild):
-  if discord.utils.get(guild.roles, name=ACTIVE_STORYTELLER_ROLE) is None:
-    await guild.create_role(name=ACTIVE_STORYTELLER_ROLE, colour=discord.Colour.green())
   if discord.utils.get(guild.roles, name=STORYTELLER_ROLE) is None:
     await guild.create_role(name=STORYTELLER_ROLE)
 
