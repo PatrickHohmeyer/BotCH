@@ -105,10 +105,10 @@ class Game:
   async def day(self):
     await self.control_channel.send('Moving players back into the lobby and unlocking rooms')
     lobby = discord.utils.get(self.cat.voice_channels, name=LOBBY)
-    await self.unlock_rooms(ROOMS + [LOBBY])
     for room in self.cat.voice_channels:
       for player in room.members:
         await player.move_to(lobby)
+    await self.unlock_rooms(ROOMS + [LOBBY])
     await self.control_channel.send('Done')
 
   async def lock_rooms(self, rooms_to_lock):
