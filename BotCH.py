@@ -14,6 +14,7 @@ ROOMS = ['Ballroom', 'Billiard Room', 'Conservatory', 'Dining Room', 'Hall', 'Ki
 PRIVATE_ROOM_PREFIX = '_BotCH_private_'
 GATHER_MUTE_TIME = 1
 STORYTELLER_ROLE = 'BotCH Storyteller'
+ACTIVE_STORYTELLER_ROLE = 'BotCH Active Storyteller'
 LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for that
 LOCK_ROOMS_FOR_PRIVACY = True # The bot needs the "Manage Roles" permission for that
 DEFAULT_GAME_NAME = 'Active'
@@ -21,12 +22,11 @@ DEFAULT_GAME_NAME = 'Active'
 class Game:
   _byCat = {}
 
-  def __init__(self, name, cat, storyteller):
+  def __init__(self, name, cat):
     self.name = name
     self.cat = cat
     self.control_channel = None
-    self.storyteller = storyteller
-    self.player_role = cat.guild.default_role
+    self.storyteller_role = discord.utils.get(cat.guild.roles, name=ACTIVE_STORYTELLER_ROLE)
     self.default_role = cat.guild.default_role
     self.private_rooms = {}
     Game._byCat[cat] = self
@@ -36,7 +36,7 @@ class Game:
     game = Game._byCat.get(cat, None)
     if game is None:
       # This should happen if and only if the Bot was restarted after setup
-      game = Game(DEFAULT_GAME_NAME, cat, message.author)
+      game = Game(DEFAULT_GAME_NAME, cat)
       game.control_channel = message.channel
     return game
 
@@ -45,14 +45,14 @@ class Game:
     secret_overwrites = {
       self.default_role: discord.PermissionOverwrite(read_messages=False),
       client.user: discord.PermissionOverwrite(read_messages=True),
-      self.storyteller: discord.PermissionOverwrite(read_messages=True),
+      self.storyteller_role: discord.PermissionOverwrite(read_messages=True),
     }
     self.control_channel = await self.cat.create_text_channel('control', overwrites=secret_overwrites)
     await self.cat.create_text_channel('general')
     # Always allow the storyteller to join rooms and move members
     public_overwrites = {
       client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
-      self.storyteller: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+      self.storyteller_role: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
     }
     await self.cat.create_voice_channel(LOBBY, overwrites=public_overwrites)
     for room in ROOMS:
@@ -64,6 +64,8 @@ class Game:
       await room.delete()
     del Game._byCat[self.cat]
     await self.cat.delete()
+    # And finally remove all members from the active storyteller role
+    # Or at least, we'd love to, but Discord is annoying, as by default it does not list members of a role
 
   async def gather(self):
     # Gather all players back into the lobby.
@@ -104,7 +106,7 @@ class Game:
       if room is None:
         secret_overwrites = {
           self.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
-          self.storyteller: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+          self.storyteller_role: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
           player: discord.PermissionOverwrite(view_channel=True, connect=True),
           client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
         }
@@ -141,13 +143,27 @@ async def setup(message):
     return
   await message.channel.send(f'Setting up structure for {str(message.guild)}')
   cat = await message.guild.create_category(CATEGORY)
-  game = Game(DEFAULT_GAME_NAME, cat, message.author)
+  game = Game(DEFAULT_GAME_NAME, cat)
+  await message.author.add_roles(game.storyteller_role)
   await game.setup()
   await message.channel.send('Created category ' + str(cat))
+
+async def assureStorytellerRoles(guild):
+  if discord.utils.get(guild.roles, name=ACTIVE_STORYTELLER_ROLE) is None:
+    await guild.create_role(name=ACTIVE_STORYTELLER_ROLE, colour=discord.Colour.green())
+  if discord.utils.get(guild.roles, name=STORYTELLER_ROLE) is None:
+    await guild.create_role(name=STORYTELLER_ROLE)
 
 @client.event
 async def on_ready():
   print(f'{client.user} has connected to Discord!')
+  for g in client.guilds:
+    await assureStorytellerRoles(g)
+
+@client.event
+async def on_guild_join(guild):
+  print(f'{client.user} has joined {guild}!')
+  await assureStorytellerRoles(guild)
 
 @client.event
 async def on_message(message):
