@@ -6,8 +6,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+intents = discord.Intents.default()
+intents.guild_reactions = True
+intents.guild_messages = True
 
-client = discord.Client()
+client = discord.Client(intents = intents)
 CATEGORY = 'Blood on the Clocktower'
 LOBBY = 'Lobby'
 ROOMS = ['Ballroom', 'Billiard Room', 'Conservatory', 'Dining Room', 'Hall', 'Kitchen', 'Library', 'Lounge', 'Study']
@@ -18,6 +21,10 @@ ACTIVE_STORYTELLER_ROLE = 'BotCH Active Storyteller'
 LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for that
 LOCK_ROOMS_FOR_PRIVACY = True # The bot needs the "Manage Roles" permission for that
 DEFAULT_GAME_NAME = 'Active'
+
+DUSK_EMOJI = '🌆'
+NIGHT_EMOJI = '🌃'
+MORNING_EMOJI = '🌇'
 
 class Game:
   _byCat = {}
@@ -47,6 +54,11 @@ class Game:
       self.storyteller_role: discord.PermissionOverwrite(read_messages=True),
     }
     self.control_channel = await self.cat.create_text_channel('control', overwrites=secret_overwrites)
+    msg = await self.control_channel.send('Hi, please click icons to interact with the bot.')
+    await msg.add_reaction(DUSK_EMOJI)
+    await msg.add_reaction(NIGHT_EMOJI)
+    await msg.add_reaction(MORNING_EMOJI)
+
     await self.cat.create_text_channel('game-chat')
     # Always allow the storyteller to join rooms and move members
     public_overwrites = {
@@ -184,6 +196,22 @@ async def on_message(message):
     if message.content == '!day':
       await game.day()
 
+# We use "raw" reactions in case the bot was restarted since it created the message
+@client.event
+async def on_raw_reaction_add(payload):  
+  if payload.user_id == client.user.id:
+    return
+
+  channel = client.get_channel(payload.channel_id)
+  if channel.category.name == CATEGORY and channel.name == 'control':
+    game = Game.fromCat(channel.category)
+    if payload.emoji.name == DUSK_EMOJI:
+      await game.gather()
+    if payload.emoji.name == NIGHT_EMOJI:
+      await game.night()
+    if payload.emoji.name == MORNING_EMOJI:
+      await game.day()
+  
 async def lock_public_room_for_privacy(room, default_role):
   await asyncio.sleep(5)
   if room.members:
