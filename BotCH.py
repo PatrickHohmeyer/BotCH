@@ -47,7 +47,7 @@ class Game:
       self.storyteller_role: discord.PermissionOverwrite(read_messages=True),
     }
     self.control_channel = await self.cat.create_text_channel('control', overwrites=secret_overwrites)
-    await self.cat.create_text_channel('general')
+    await self.cat.create_text_channel('game-chat')
     # Always allow the storyteller to join rooms and move members
     public_overwrites = {
       client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
