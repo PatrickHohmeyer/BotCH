@@ -64,7 +64,7 @@ class Game:
     del Game._byCat[self.cat]
     await self.cat.delete()
     # And finally remove the active storyteller role
-    self.storyteller_role.delete()
+    await self.storyteller_role.delete()
 
   async def gather(self):
     # Gather all players back into the lobby.
