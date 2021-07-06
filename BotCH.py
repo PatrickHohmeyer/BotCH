@@ -31,13 +31,12 @@ class Game:
     self.private_rooms = {}
     Game._byCat[cat] = self
 
-  def fromCat(message):
-    cat = message.channel.category
+  def fromCat(cat):
     game = Game._byCat.get(cat, None)
     if game is None:
       # This should happen if and only if the Bot was restarted after setup
       game = Game(DEFAULT_GAME_NAME, cat)
-      game.control_channel = message.channel
+      game.control_channel = discord.utils.get(cat.guild.text_channels, name='control')
     return game
 
   async def setup(self):
@@ -173,7 +172,7 @@ async def on_message(message):
     await setup(message)
 
   if message.channel.category.name == CATEGORY and message.channel.name == 'control':
-    game = Game.fromCat(message)
+    game = Game.fromCat(message.channel.category)
     if message.content == '!cleanup':
       await game.cleanup()
     if message.content == '!gather':
