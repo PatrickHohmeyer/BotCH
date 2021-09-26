@@ -158,10 +158,15 @@ class Game:
       if room.name in rooms_to_unlock:
         await room.set_permissions(self.default_role, connect=True)
   
+  # Creating rooms is severely throttled on Discord and we ran into problems when creating all the
+  # private rooms in the first night. So now we create them when we see a player join any voice
+  # channel under the game's category. (Usually when they join the Lobby the first time.)
+  # And then, we only need to move people at night and not create rooms for them.
   async def ensurePrivateRoom(self, player):
     room_name = PRIVATE_ROOM_PREFIX + player.name
     room = discord.utils.get(self.cat.voice_channels, name=room_name)
     if room is None:
+      # Nobody can even see the room, except for the Bot, the Storyteller and the player who's room it is.
       secret_overwrites = {
         self.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
         self.storyteller_role: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
