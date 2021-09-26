@@ -11,15 +11,35 @@ intents.guild_reactions = True
 intents.guild_messages = True
 
 client = discord.Client(intents = intents)
+# Names for various Discord entities
 CATEGORY = 'Blood on the Clocktower'
 LOBBY = 'Lobby'
 ROOMS = ['Ballroom', 'Billiard Room', 'Conservatory', 'Dining Room', 'Hall', 'Kitchen', 'Library', 'Lounge', 'Study']
 PRIVATE_ROOM_PREFIX = '_BotCH_private_'
-GATHER_MUTE_TIME = 1
 STORYTELLER_ROLE = 'BotCH Storyteller'
 ACTIVE_STORYTELLER_ROLE = 'BotCH Active Storyteller'
+
+# Time to mute players when dragging them into the Lobby. Recommended to leave at 1.
+GATHER_MUTE_TIME = 1
+
+# Whether to lock the public rooms during dusk/night.
+# This will e.g. prevent players from jumping into the lobby early.
 LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for that
+
+# Whether to lock the side rooms after players joined. This will prevent a third party to drop into
+# a private conversation - we had some problems with curious players doing just that. Usually this
+# should be governed by social conventions instead, but if you want to use technology to enforce
+# them, this setting is for you.
+# The rooms will be unlocked after the last player left.
+# The Storyteller is not affected by this and can always join rooms.
 LOCK_ROOMS_FOR_PRIVACY = True # The bot needs the "Manage Roles" permission for that
+# How long to wait after the first player joined to lock the room
+LOCK_FOR_PRIVACY_TIME = 5
+
+# How long to display the Bots messages before deleting them.
+BOT_MESSAGES_DISPLAY_TIME = 10
+
+# Work in progress to allow multiple games on the same server.
 DEFAULT_GAME_NAME = 'Active'
 
 DUSK_EMOJI = '🌆'
@@ -80,7 +100,7 @@ class Game:
 
   async def self_deleting_message(self, text):
     msg = await(self.control_channel.send(text))
-    await msg.delete(delay=10)
+    await msg.delete(delay=BOT_MESSAGES_DISPLAY_TIME)
 
   async def gather(self):
     # Gather all players back into the lobby.
@@ -224,7 +244,7 @@ async def on_raw_reaction(payload):
       await game.day()
 
 async def lock_public_room_for_privacy(room, default_role):
-  await asyncio.sleep(5)
+  await asyncio.sleep(LOCK_FOR_PRIVACY_TIME)
   if room.members:
     await room.set_permissions(default_role, connect=False)
 
