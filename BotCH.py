@@ -78,10 +78,14 @@ class Game:
     # And finally remove the active storyteller role
     await self.storyteller_role.delete()
 
+  async def self_deleting_message(self, text):
+    msg = await(self.control_channel.send(text))
+    await msg.delete(delay=10)
+
   async def gather(self):
     # Gather all players back into the lobby.
     # Good to break up private discussions and get people to vote.
-    await self.control_channel.send('Gathering up stragglers')
+    await self.self_deleting_message('Gathering up stragglers')
     stragglers = []
     lobby = None
     for room in self.cat.voice_channels:
@@ -90,21 +94,21 @@ class Game:
       else:
         stragglers += room.members
     if len(stragglers) == 0:
-      await self.control_channel.send('No stragglers found')
+      await self.self_deleting_message('No stragglers found')
     else:
       for player in stragglers:
         # Server mute and move the player. The server mute is there to protect a player from
         # babbling something out while being transferred.
         await player.edit(mute=True, voice_channel=lobby)
-      await self.control_channel.send(f'{len(stragglers)} stragglers gathered ...')
+      await self.self_deleting_message(f'{len(stragglers)} stragglers gathered ...')
       await asyncio.sleep(GATHER_MUTE_TIME) # wait a second before unmuting
       for player in stragglers:
         await player.edit(mute=False)
-      await self.control_channel.send('... and unmuted')
+      await self.self_deleting_message('... and unmuted')
     await self.lock_rooms(ROOMS)
 
   async def night(self):
-    await self.control_channel.send('Moving players into private rooms for night time')
+    await self.self_deleting_message('Moving players into private rooms for night time')
     players = []
     for room in self.cat.voice_channels:
       players += room.members
@@ -112,16 +116,16 @@ class Game:
       room = await self.ensurePrivateRoom(player)
       await player.move_to(room)
     await self.lock_rooms(ROOMS + [LOBBY])
-    await self.control_channel.send('Done')
+    await self.self_deleting_message('Done')
 
   async def day(self):
-    await self.control_channel.send('Moving players back into the lobby and unlocking rooms')
+    await self.self_deleting_message('Moving players back into the lobby and unlocking rooms')
     lobby = discord.utils.get(self.cat.voice_channels, name=LOBBY)
     for room in self.cat.voice_channels:
       for player in room.members:
         await player.move_to(lobby)
     await self.unlock_rooms(ROOMS + [LOBBY])
-    await self.control_channel.send('Done')
+    await self.self_deleting_message('Done')
 
   async def lock_rooms(self, rooms_to_lock):
     if LOCK_ROOMS_FOR_NIGHT:
