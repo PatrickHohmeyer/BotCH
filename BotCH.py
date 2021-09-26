@@ -198,7 +198,14 @@ async def on_message(message):
 
 # We use "raw" reactions in case the bot was restarted since it created the message
 @client.event
-async def on_raw_reaction_add(payload):  
+async def on_raw_reaction_add(payload):
+  await on_raw_reaction(payload)
+
+@client.event
+async def on_raw_reaction_remove(payload):
+  await on_raw_reaction(payload)
+
+async def on_raw_reaction(payload):
   if payload.user_id == client.user.id:
     return
 
@@ -206,12 +213,12 @@ async def on_raw_reaction_add(payload):
   if channel.category.name == CATEGORY and channel.name == 'control':
     game = Game.fromCat(channel.category)
     if payload.emoji.name == DUSK_EMOJI:
-      await game.gather()
+      await game.gather()      
     if payload.emoji.name == NIGHT_EMOJI:
       await game.night()
     if payload.emoji.name == MORNING_EMOJI:
       await game.day()
-  
+
 async def lock_public_room_for_privacy(room, default_role):
   await asyncio.sleep(5)
   if room.members:
