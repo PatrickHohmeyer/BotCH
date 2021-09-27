@@ -22,6 +22,9 @@ ACTIVE_STORYTELLER_ROLE = 'BotCH Active Storyteller'
 # Time to mute players when dragging them into the Lobby. Recommended to leave at 1.
 GATHER_MUTE_TIME = 1
 
+# Time to mute players when clicking SHUSH
+SHUSH_MUTE_TIME = 10
+
 # Whether to lock the public rooms during dusk/night.
 # This will e.g. prevent players from jumping into the lobby early.
 LOCK_ROOMS_FOR_NIGHT = False # The bot needs the "Manage Roles" permission for that
@@ -45,6 +48,7 @@ DEFAULT_GAME_NAME = 'Active'
 DUSK_EMOJI = '🌆'
 NIGHT_EMOJI = '🌃'
 MORNING_EMOJI = '🌇'
+SHUSH_EMOJI = '🤫'
 
 class Game:
   _byCat = {}
@@ -78,6 +82,7 @@ class Game:
     await msg.add_reaction(DUSK_EMOJI)
     await msg.add_reaction(NIGHT_EMOJI)
     await msg.add_reaction(MORNING_EMOJI)
+    await msg.add_reaction(SHUSH_EMOJI)
 
     await self.cat.create_text_channel('game-chat')
     # Always allow the storyteller to join rooms and move members
@@ -146,6 +151,18 @@ class Game:
         await player.move_to(lobby)
     await self.unlock_rooms(ROOMS + [LOBBY])
     await self.self_deleting_message('Done')
+
+  async def shush(self):
+    lobby = discord.utils.get(self.cat.voice_channels, name=LOBBY)
+    muted_players = lobby.members
+    for player in muted_players:
+      if not player in self.storyteller_role.members:
+        await player.edit(mute=True)
+    await self.self_deleting_message(f'Muted lobby for {SHUSH_MUTE_TIME} seconds ...')
+    await asyncio.sleep(SHUSH_MUTE_TIME)
+    for player in muted_players:
+      await player.edit(mute=False)
+    await self.self_deleting_message('... and unmuted')
 
   async def lock_rooms(self, rooms_to_lock):
     if LOCK_ROOMS_FOR_NIGHT:
@@ -247,6 +264,8 @@ async def on_raw_reaction(payload):
       await game.night()
     if payload.emoji.name == MORNING_EMOJI:
       await game.day()
+    if payload.emoji.name == SHUSH_EMOJI:
+      await game.shush()
 
 async def lock_public_room_for_privacy(room, default_role):
   await asyncio.sleep(LOCK_FOR_PRIVACY_TIME)
