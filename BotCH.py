@@ -24,7 +24,7 @@ GATHER_MUTE_TIME = 1
 
 # Whether to lock the public rooms during dusk/night.
 # This will e.g. prevent players from jumping into the lobby early.
-LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for that
+LOCK_ROOMS_FOR_NIGHT = False # The bot needs the "Manage Roles" permission for that
 
 # Whether to lock the side rooms after players joined. This will prevent a third party to drop into
 # a private conversation - we had some problems with curious players doing just that. Usually this
@@ -32,7 +32,7 @@ LOCK_ROOMS_FOR_NIGHT = True # The bot needs the "Manage Roles" permission for th
 # them, this setting is for you.
 # The rooms will be unlocked after the last player left.
 # The Storyteller is not affected by this and can always join rooms.
-LOCK_ROOMS_FOR_PRIVACY = True # The bot needs the "Manage Roles" permission for that
+LOCK_ROOMS_FOR_PRIVACY = False # The bot needs the "Manage Roles" permission for that
 # How long to wait after the first player joined to lock the room
 LOCK_FOR_PRIVACY_TIME = 5
 
