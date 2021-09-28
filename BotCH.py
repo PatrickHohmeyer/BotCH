@@ -194,6 +194,12 @@ class Game:
     return room
       
 
+def isInBotCHCategory(channel):
+  return channel and channel.category and channel.category.name == CATEGORY
+
+def isControlChannel(channel):
+  return isInBotCHCategory(channel) and channel.name == 'control'
+
 async def setup(guild, author, sendfx):
   is_authorized = ((guild.owner_id == author.id) or
     (discord.utils.get(author.roles, name=STORYTELLER_ROLE) is not None))
@@ -234,7 +240,7 @@ async def on_message(message):
   if message.content == '!BotCH setup':
     await setup(message.guild, message.author, message.channel.send)
 
-  if message.channel.category.name == CATEGORY and message.channel.name == 'control':
+  if isControlChannel(message.channel):
     game = Game.fromCat(message.channel.category)
     if message.content == '!cleanup':
       await game.cleanup()
@@ -287,12 +293,12 @@ async def on_voice_state_update(member, before, after):
   if after.channel == before.channel:
     return # ignore mute / unmute events and similar things, we only want channel changes
 
-  if after.channel and after.channel.category and after.channel.category.name == CATEGORY:
+  if isInBotCHCategory(after.channel):
     if (after.channel.name in ROOMS):
       asyncio.create_task(lock_public_room_for_privacy(after.channel, member.guild.default_role))
     game = Game.fromCat(after.channel.category)
     await game.ensurePrivateRoom(member)
-  if before.channel and before.channel.category and before.channel.category.name == CATEGORY:
+  if isInBotCHCategory(before.channel):
     if before.channel.name in ROOMS and not before.channel.members:
       await unlock_empty_room(before.channel, member.guild.default_role)
     game = Game.fromCat(before.channel.category)
