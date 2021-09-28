@@ -277,6 +277,7 @@ async def on_raw_reaction(payload):
       await game.shush()
 
 async def lock_public_room_for_privacy(room, default_role):
+  if LOCK_ROOMS_FOR_PRIVACY:
   await asyncio.sleep(LOCK_FOR_PRIVACY_TIME)
   if room.members:
     await room.set_permissions(default_role, connect=False)
@@ -287,9 +288,6 @@ async def unlock_empty_room(room, default_role):
 
 @client.event
 async def on_voice_state_update(member, before, after):
-  if not LOCK_ROOMS_FOR_PRIVACY:
-    return
-
   if after.channel == before.channel:
     return # ignore mute / unmute events and similar things, we only want channel changes
 
