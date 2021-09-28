@@ -2,15 +2,22 @@ import os
 import asyncio
 
 import discord
+from discord_slash import SlashCommand
+from discord_slash.utils.manage_commands import create_option
+from discord_slash.model import SlashCommandOptionType
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+GUILD_ID = int(os.getenv('GUILD_ID'))
 intents = discord.Intents.default()
 intents.guild_reactions = True
 intents.guild_messages = True
+intents.integrations = True
 
 client = discord.Client(intents = intents)
+slash = SlashCommand(client, sync_commands=True)
+
 # Names for various Discord entities
 CATEGORY = 'Blood on the Clocktower'
 LOBBY = 'Lobby'
@@ -94,8 +101,8 @@ class Game:
     for room in ROOMS:
       await self.cat.create_voice_channel(room, overwrites=public_overwrites)
 
-  async def cleanup(self):
-    await self.control_channel.send('Cleaning the game up')
+  async def cleanup(self, sendfx):
+    await sendfx('Cleaning the game up')
     for room in self.cat.channels:
       await room.delete()
     del Game._byCat[self.cat]
@@ -243,7 +250,7 @@ async def on_message(message):
   if isControlChannel(message.channel):
     game = Game.fromCat(message.channel.category)
     if message.content == '!cleanup':
-      await game.cleanup()
+      await game.cleanup(message.channel.send)
     if message.content == '!gather':
       await game.gather()
     if message.content == '!night':
@@ -278,9 +285,9 @@ async def on_raw_reaction(payload):
 
 async def lock_public_room_for_privacy(room, default_role):
   if LOCK_ROOMS_FOR_PRIVACY:
-  await asyncio.sleep(LOCK_FOR_PRIVACY_TIME)
-  if room.members:
-    await room.set_permissions(default_role, connect=False)
+    await asyncio.sleep(LOCK_FOR_PRIVACY_TIME)
+    if room.members:
+      await room.set_permissions(default_role, connect=False)
 
 async def unlock_empty_room(room, default_role):
   if not room.members:
@@ -301,5 +308,38 @@ async def on_voice_state_update(member, before, after):
       await unlock_empty_room(before.channel, member.guild.default_role)
     game = Game.fromCat(before.channel.category)
     await game.ensurePrivateRoom(member)
+
+@slash.subcommand(base="botch",
+                  name="set-storyteller",
+                  description="This will change the active storyteller.",
+                  options=[
+                    create_option(
+                      name="new_storyteller",
+                      description="The new storyteller",
+                      option_type=SlashCommandOptionType.USER,
+                      required=True
+                    )
+                  ],
+                  guild_ids=[GUILD_ID])
+async def set_storyteller(ctx, new_storyteller):
+  await ctx.send(f'Work in progress, TODO set storyteller to: {new_storyteller}')
+
+@slash.subcommand(base="botch",
+                  name="setup",
+                  description="Setup the Blood on the Clocktower category and channels.",
+                  guild_ids=[GUILD_ID])
+async def slash_setup(ctx):
+  await setup(ctx.guild, ctx.author, ctx.send)
+
+@slash.subcommand(base="botch",
+                  name="cleanup",
+                  description="This will delete the Blood on the Clocktower category and all sub-channels.",
+                  guild_ids=[GUILD_ID])
+async def slash_cleanup(ctx):
+  if isControlChannel(ctx.channel):
+    game = Game.fromCat(ctx.channel.category)
+    await game.cleanup(ctx.send)
+  else:
+    await ctx.send('You must send the cleanup command from the control channel.')
 
 client.run(TOKEN)
