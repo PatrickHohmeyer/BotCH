@@ -194,19 +194,22 @@ class Game:
     return room
       
 
-async def setup(message):
-  is_authorized = ((message.guild.owner_id == message.author.id) or
-    (discord.utils.get(message.author.roles, name=STORYTELLER_ROLE) is not None))
+async def setup(guild, author, sendfx):
+  is_authorized = ((guild.owner_id == author.id) or
+    (discord.utils.get(author.roles, name=STORYTELLER_ROLE) is not None))
   if not is_authorized:
-    await message.channel.send('Only the owner or a BotCH Storyteller can create a new game')
+    await sendfx('Only the owner or a BotCH Storyteller can create a new game')
     return
-  await message.channel.send(f'Setting up structure for {str(message.guild)}')
-  await message.guild.create_role(name=ACTIVE_STORYTELLER_ROLE, colour=discord.Colour.green())
-  cat = await message.guild.create_category(CATEGORY)
+  if CATEGORY in guild.categories:
+    await sendfx(f'Category {CATEGORY} already exists')
+    return
+  await sendfx(f'Setting up structure for {str(guild)}')
+  await guild.create_role(name=ACTIVE_STORYTELLER_ROLE, colour=discord.Colour.green())
+  cat = await guild.create_category(CATEGORY)
   game = Game(DEFAULT_GAME_NAME, cat)
-  await message.author.add_roles(game.storyteller_role)
+  await author.add_roles(game.storyteller_role)
   await game.setup()
-  await message.channel.send('Created category ' + str(cat))
+  await sendfx(f'Created category {str(cat)}')
 
 async def assureStorytellerRoles(guild):
   if discord.utils.get(guild.roles, name=STORYTELLER_ROLE) is None:
@@ -229,7 +232,7 @@ async def on_message(message):
     return
 
   if message.content == '!BotCH setup':
-    await setup(message)
+    await setup(message.guild, message.author, message.channel.send)
 
   if message.channel.category.name == CATEGORY and message.channel.name == 'control':
     game = Game.fromCat(message.channel.category)
