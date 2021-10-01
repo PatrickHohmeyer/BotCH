@@ -322,7 +322,20 @@ async def on_voice_state_update(member, before, after):
                   ],
                   guild_ids=[GUILD_ID])
 async def set_storyteller(ctx, new_storyteller):
-  await ctx.send(f'Work in progress, TODO set storyteller to: {new_storyteller}')
+  if isControlChannel(ctx.channel):
+    game = Game.fromCat(ctx.channel.category)
+    if game.storyteller_role in new_storyteller.roles:
+      await ctx.send(f'Asked to set the storyteller to: {new_storyteller}, but that IS the storyteller')
+      return
+    if not game.storyteller_role in ctx.author.roles:
+      await ctx.send(f'You are not the current storyteller!')
+      return
+    await ctx.send(f'Setting storyteller to: {new_storyteller}')
+    await new_storyteller.add_roles(game.storyteller_role)
+    await ctx.author.remove_roles(game.storyteller_role)
+    await ctx.send(f'Storyteller change complete!')
+  else:
+    await ctx.send('You must send the commands from the control channel.')
 
 @slash.subcommand(base="botch",
                   name="setup",
