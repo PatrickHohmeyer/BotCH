@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+DEPUTY_TOKEN = os.getenv('DEPUTY1_TOKEN')
 GUILD_ID = int(os.getenv('GUILD_ID'))
 intents = discord.Intents.default()
 intents.guild_reactions = True
@@ -16,6 +17,7 @@ intents.guild_messages = True
 intents.integrations = True
 
 client = discord.Client(intents = intents)
+deputy = discord.Client()
 slash = SlashCommand(client, sync_commands=True)
 
 # Names for various Discord entities
@@ -355,4 +357,11 @@ async def slash_cleanup(ctx):
   else:
     await ctx.send('You must send the cleanup command from the control channel.')
 
-client.run(TOKEN)
+@deputy.event
+async def on_ready():
+  print(f'{deputy.user} has connected to Discord!')
+
+loop = asyncio.get_event_loop()
+loop.create_task(deputy.start(DEPUTY_TOKEN))
+loop.create_task(client.start(TOKEN))
+loop.run_forever()
