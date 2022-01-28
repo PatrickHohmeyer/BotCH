@@ -59,6 +59,9 @@ NIGHT_EMOJI = '🌃'
 MORNING_EMOJI = '🌇'
 SHUSH_EMOJI = '🤫'
 
+deputy_players = {}
+TOTAL_DEPUTIES = 1
+
 class Game:
   _byCat = {}
 
@@ -97,6 +100,7 @@ class Game:
     # Always allow the storyteller to join rooms and move members
     public_overwrites = {
       client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+      deputy.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
       self.storyteller_role: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
     }
     await self.cat.create_voice_channel(LOBBY, overwrites=public_overwrites)
@@ -133,7 +137,7 @@ class Game:
       for player in stragglers:
         # Server mute and move the player. The server mute is there to protect a player from
         # babbling something out while being transferred.
-        await player.edit(mute=True, voice_channel=lobby)
+        await deputy_players[player.id].edit(mute=True, voice_channel=lobby)
       await self.self_deleting_message(f'{len(stragglers)} stragglers gathered ...')
       await asyncio.sleep(GATHER_MUTE_TIME) # wait a second before unmuting
       for player in stragglers:
@@ -146,18 +150,28 @@ class Game:
     players = []
     for room in self.cat.voice_channels:
       players += room.members
+    current_deputy = 1
     for player in players:
       room = await self.ensurePrivateRoom(player)
-      await player.move_to(room)
+      if current_deputy == 0:
+        await player.move_to(room)
+      elif current_deputy == 1:
+        await deputy_players[player.id].move_to(room)
+      current_deputy = (current_deputy + 1) % (TOTAL_DEPUTIES + 1)
     await self.lock_rooms(ROOMS + [LOBBY])
     await self.self_deleting_message('Done')
 
   async def day(self):
     await self.self_deleting_message('Moving players back into the lobby and unlocking rooms')
     lobby = discord.utils.get(self.cat.voice_channels, name=LOBBY)
+    current_deputy = 1
     for room in self.cat.voice_channels:
       for player in room.members:
-        await player.move_to(lobby)
+        if current_deputy == 0:
+          await player.move_to(lobby)
+        elif current_deputy == 1:
+          await deputy_players[player.id].move_to(lobby)
+        current_deputy = (current_deputy + 1) % (TOTAL_DEPUTIES + 1)
     await self.unlock_rooms(ROOMS + [LOBBY])
     await self.self_deleting_message('Done')
 
@@ -198,6 +212,7 @@ class Game:
         self.storyteller_role: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
         player: discord.PermissionOverwrite(view_channel=True, connect=True),
         client.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
+        deputy.user: discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True),
       }
       room = await self.cat.create_voice_channel(room_name, overwrites=secret_overwrites)
     return room
@@ -360,6 +375,15 @@ async def slash_cleanup(ctx):
 @deputy.event
 async def on_ready():
   print(f'{deputy.user} has connected to Discord!')
+
+@deputy.event
+async def on_voice_state_update(member, before, after):
+  if after.channel == before.channel:
+    return # ignore mute / unmute events and similar things, we only want channel changes
+
+  if isInBotCHCategory(after.channel) or isInBotCHCategory(before.channel):
+    # Keep track of the players - this allows us to use the deputy for moves
+    deputy_players[member.id] = member
 
 loop = asyncio.get_event_loop()
 loop.create_task(deputy.start(DEPUTY_TOKEN))
