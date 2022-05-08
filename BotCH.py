@@ -357,6 +357,33 @@ async def slash_cleanup(ctx):
   else:
     await ctx.send('You must send the cleanup command from the control channel.')
 
+@slash.subcommand(base="botch",
+                  name="poll",
+                  description="Simple edition poll.",
+                  options=[
+                    create_option(
+                      name="more_options",
+                      description="Additional options in the poll. Comma separated",
+                      option_type=SlashCommandOptionType.STRING,
+                      required=False,
+                    )
+                  ],
+                  guild_ids=[GUILD_ID])
+async def slash_poll(ctx, more_options = None):
+  op = ['Trouble Brewing', 'Sects & Violets', 'Bad Moon Rising']
+  if more_options:
+    op += more_options.split(',')
+  s = 'Poll:\n'
+  emoji = 0x1F1E6 # regional_indicator_a, Discord renders this as an A in a blue square
+  for o in op:
+    s += f'{chr(emoji)} - {o.strip()}\n'
+    emoji += 1
+  msg = await ctx.send(s)
+  emoji = 0x1F1E6
+  for o in op:
+    await msg.add_reaction(chr(emoji))
+    emoji += 1
+
 loop = asyncio.get_event_loop()
 loop.create_task(client.start(TOKEN))
 
