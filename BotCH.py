@@ -260,25 +260,6 @@ async def on_guild_join(guild):
   print(f'{client.user} has joined {guild}!')
   await assureStorytellerRoles(guild)
 
-@client.event
-async def on_message(message):
-  if message.author == client.user:
-    return
-
-  if message.content == '!BotCH setup':
-    await setup(message.guild, message.author, message.channel.send)
-
-  if isControlChannel(message.channel):
-    game = Game.fromCat(message.channel.category)
-    if message.content == '!cleanup':
-      await game.cleanup(message.channel.send)
-    if message.content == '!gather':
-      await game.gather()
-    if message.content == '!night':
-      await game.night()
-    if message.content == '!day':
-      await game.day()
-
 # We use "raw" reactions in case the bot was restarted since it created the message
 @client.event
 async def on_raw_reaction_add(payload):
