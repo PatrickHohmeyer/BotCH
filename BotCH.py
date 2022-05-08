@@ -357,20 +357,34 @@ async def slash_cleanup(ctx):
   else:
     await ctx.send('You must send the cleanup command from the control channel.')
 
+BASE_OPTIONS={
+  'Base editions': ['Trouble Brewing', 'Sects & Violets', 'Bad Moon Rising'],
+  'Teensyville': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom', 'A Lleech of Distrust'],
+  'Custom': ['Catfishing', 'Deadly Penance Day', 'Hide & Seek', 'Public Executions', 'Tax Fraud'],
+  'Empty': []
+}
+
 @slash.subcommand(base="botch",
                   name="poll",
                   description="Simple edition poll.",
                   options=[
                     create_option(
+                      name="base_options",
+                      description="Which standard options to use for the poll.",
+                      option_type=SlashCommandOptionType.STRING,
+                      required=True,
+                      choices=list(BASE_OPTIONS)
+                    ),
+                    create_option(
                       name="more_options",
                       description="Additional options in the poll. Comma separated",
                       option_type=SlashCommandOptionType.STRING,
                       required=False,
-                    )
+                    ),
                   ],
                   guild_ids=[GUILD_ID])
-async def slash_poll(ctx, more_options = None):
-  op = ['Trouble Brewing', 'Sects & Violets', 'Bad Moon Rising']
+async def slash_poll(ctx, base_options, more_options = None):
+  op = BASE_OPTIONS[base_options].copy()
   if more_options:
     op += more_options.split(',')
   s = 'Poll:\n'
@@ -378,6 +392,8 @@ async def slash_poll(ctx, more_options = None):
   for o in op:
     s += f'{chr(emoji)} - {o.strip()}\n'
     emoji += 1
+  if base_options != 'Base editions' or more_options:
+    s += 'See <https://botc-scripts.azurewebsites.net/> for custom scripts.'
   msg = await ctx.send(s)
   emoji = 0x1F1E6
   for o in op:
