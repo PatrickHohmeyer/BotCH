@@ -327,15 +327,16 @@ async def set_storyteller(ctx, new_storyteller):
   if isControlChannel(ctx.channel):
     game = Game.fromCat(ctx.channel.category)
     if game.storyteller_role in new_storyteller.roles:
-      await ctx.send(f'Asked to set the storyteller to: {new_storyteller}, but that IS the storyteller')
+      await game.self_deleting_message(
+        f'Asked to set the storyteller to: {new_storyteller}, but that IS the storyteller')
       return
     if not game.storyteller_role in ctx.author.roles:
-      await ctx.send(f'You are not the current storyteller!')
+      await game.self_deleting_message(f'You are not the current storyteller!')
       return
-    await ctx.send(f'Setting storyteller to: {new_storyteller}')
+    await game.self_deleting_message(f'Setting storyteller to: {new_storyteller}')
     await new_storyteller.add_roles(game.storyteller_role)
     await ctx.author.remove_roles(game.storyteller_role)
-    await ctx.send(f'Storyteller change complete!')
+    await game.self_deleting_message(f'Storyteller change complete!')
   else:
     await ctx.send('You must send the commands from the control channel.')
 
