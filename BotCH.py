@@ -359,7 +359,7 @@ async def slash_cleanup(ctx):
 
 BASE_OPTIONS={
   'Base editions': ['Trouble Brewing', 'Sects & Violets', 'Bad Moon Rising'],
-  'Teensyville': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom', 'A Lleech of Distrust'],
+  'Teensyville': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom'],
   'Custom': ['Catfishing', 'Deadly Penance Day', 'Hide & Seek', 'Public Executions', 'Tax Fraud'],
   'Empty': []
 }
