@@ -1,10 +1,9 @@
 import os
 import asyncio
+from typing import Literal
 
 import discord
-from discord_slash import SlashCommand
-from discord_slash.utils.manage_commands import create_option
-from discord_slash.model import SlashCommandOptionType
+from discord import app_commands
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,8 +15,20 @@ intents.guild_reactions = True
 intents.guild_messages = True
 intents.integrations = True
 
-client = discord.Client(intents = intents)
-slash = SlashCommand(client, sync_commands=True)
+
+class MyClient(discord.Client):
+  def __init__(self, *, intents: discord.Intents):
+    super().__init__(intents=intents)
+    self.botch_group = app_commands.Group(
+        name="botch", description='Commands for BotCH')
+    self.tree = app_commands.CommandTree(self)
+
+  async def setup_hook(self):
+    my_guild = discord.Object(id=GUILD_ID) 
+    self.tree.add_command(self.botch_group, guild=my_guild)
+    await self.tree.sync(guild=my_guild)
+
+client = MyClient(intents = intents)
 
 # Names for various Discord entities
 CATEGORY = 'Blood on the Clocktower'
@@ -81,6 +92,10 @@ async def deputized_move_and_mute(player, room):
 async def send_temp_message(channel, text):
   msg = await(channel.send(text))
   await msg.delete(delay=BOT_MESSAGES_DISPLAY_TIME)
+
+async def send_temp_response(interaction, text):
+  await interaction.response.send_message(
+      content=text, ephemeral=True, delete_after=BOT_MESSAGES_DISPLAY_TIME)
 
 class Game:
   _byCat = {}
@@ -314,80 +329,56 @@ async def on_voice_state_update(member, before, after):
     game = Game.fromCat(before.channel.category)
     await game.ensurePrivateRoom(member)
 
-@slash.subcommand(base="botch",
-                  name="set-storyteller",
-                  description="This will change the active storyteller.",
-                  options=[
-                    create_option(
-                      name="new_storyteller",
-                      description="The new storyteller",
-                      option_type=SlashCommandOptionType.USER,
-                      required=True
-                    )
-                  ],
-                  guild_ids=[GUILD_ID])
-async def set_storyteller(ctx, new_storyteller):
+@client.botch_group.command(
+    name = 'set-storyteller', description = 'This will change the active storyteller.')
+@app_commands.describe(new_storyteller="The new storyteller")
+async def set_storyteller(
+    ctx: discord.Interaction, new_storyteller : discord.Member):
   if isControlChannel(ctx.channel):
     game = Game.fromCat(ctx.channel.category)
     if game.storyteller_role in new_storyteller.roles:
-      await send_temp_message(ctx,
+      await send_temp_response(ctx,
         f'Asked to set the storyteller to: {new_storyteller}, but that IS the storyteller')
       return
     if not game.storyteller_role in ctx.author.roles:
-      await send_temp_message(ctx, f'You are not the current storyteller!')
+      await send_temp_response(ctx, f'You are not the current storyteller!')
       return
-    await send_temp_message(ctx, f'Setting storyteller to: {new_storyteller}')
+    await send_temp_message(ctx.channel, f'Setting storyteller to: {new_storyteller}')
     await new_storyteller.add_roles(game.storyteller_role)
-    await ctx.author.remove_roles(game.storyteller_role)
-    await send_temp_message(ctx, f'Storyteller change complete!')
+    await ctx.user.remove_roles(game.storyteller_role)
+    await send_temp_response(ctx, f'Storyteller change complete!')
   else:
-    await ctx.send('You must send the commands from the control channel.')
+    await send_temp_response(ctx, 'You must send the commands from the control channel.')
 
-@slash.subcommand(base="botch",
-                  name="setup",
-                  description="Setup the Blood on the Clocktower category and channels.",
-                  guild_ids=[GUILD_ID])
+@client.botch_group.command(
+    name="setup",
+    description="Setup the Blood on the Clocktower category and channels.")
 async def slash_setup(ctx):
-  await setup(ctx.guild, ctx.author, ctx.send)
+  await setup(ctx.guild, ctx.user, ctx.channel.send) # TODO: use response correctly
 
-@slash.subcommand(base="botch",
-                  name="cleanup",
-                  description="This will delete the Blood on the Clocktower category and all sub-channels.",
-                  guild_ids=[GUILD_ID])
+@client.botch_group.command(
+    name="cleanup",
+    description="This will delete the Blood on the Clocktower category and all sub-channels.")
 async def slash_cleanup(ctx):
   if isControlChannel(ctx.channel):
     game = Game.fromCat(ctx.channel.category)
-    await game.cleanup(ctx.send)
+    await game.cleanup(ctx.channel.send)
   else:
-    await ctx.send('You must send the cleanup command from the control channel.')
+    await send_temp_response(
+        ctx, 'You must send the cleanup command from the control channel.')
 
+BaseOption = Literal['Base editions', 'Teensyville', 'Custom Scripts', 'Empty']
 BASE_OPTIONS={
   'Base editions': ['Trouble Brewing', 'Sects & Violets', 'Bad Moon Rising'],
   'Teensyville': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom'],
-  'Custom': ['Catfishing', 'Deadly Penance Day', 'Hide & Seek', 'Public Executions', 'Tax Fraud'],
+  'Custom Scripts': ['Catfishing', 'Deadly Penance Day', 'Hide & Seek', 'Public Executions', 'Tax Fraud'],
   'Empty': []
 }
 
-@slash.subcommand(base="botch",
-                  name="poll",
-                  description="Simple edition poll.",
-                  options=[
-                    create_option(
-                      name="base_options",
-                      description="Which standard options to use for the poll.",
-                      option_type=SlashCommandOptionType.STRING,
-                      required=True,
-                      choices=list(BASE_OPTIONS)
-                    ),
-                    create_option(
-                      name="more_options",
-                      description="Additional options in the poll. Comma separated",
-                      option_type=SlashCommandOptionType.STRING,
-                      required=False,
-                    ),
-                  ],
-                  guild_ids=[GUILD_ID])
-async def slash_poll(ctx, base_options, more_options = None):
+@client.botch_group.command(
+    name="poll",
+    description="Simple edition poll.")
+async def slash_poll(ctx, base_options : BaseOption, more_options : str = ''):
   op = BASE_OPTIONS[base_options].copy()
   if more_options:
     op += more_options.split(',')
@@ -398,7 +389,8 @@ async def slash_poll(ctx, base_options, more_options = None):
     emoji += 1
   if base_options != 'Base editions' or more_options:
     s += 'See <https://botc-scripts.azurewebsites.net/> for custom scripts.'
-  msg = await ctx.send(s)
+  await ctx.response.send_message(s)
+  msg = await ctx.original_response()
   emoji = 0x1F1E6
   for o in op:
     await msg.add_reaction(chr(emoji))
@@ -409,7 +401,7 @@ loop.create_task(client.start(TOKEN))
 
 def create_deputy(dt):
   global loop, deputy_players, DEPUTY_DIVIDER
-  d = discord.Client()
+  d = discord.Client(intents=discord.Intents.default())
   d_players = {}
   deputy_players.append(d_players)
   DEPUTY_DIVIDER += 1
