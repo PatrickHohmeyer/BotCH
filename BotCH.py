@@ -367,10 +367,11 @@ async def slash_cleanup(ctx):
     await send_temp_response(
         ctx, 'You must send the cleanup command from the control channel.')
 
-BaseOption = Literal['Base editions', 'Teensyville', 'Custom Scripts', 'Empty']
+BaseOption = Literal['Base editions', 'Teensyville (few)', 'Teensyville (many)', 'Custom Scripts', 'Empty']
 BASE_OPTIONS={
   'Base editions': ['Trouble Brewing', 'Sects & Violets', 'Bad Moon Rising'],
-  'Teensyville': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom'],
+  'Teensyville (few)': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom'],
+  'Teensyville (many)': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom', 'Miserable Little Pile of Secrets', 'A Lleech of Distrust', 'On Thin Ice (has twins)', 'Spooky Tea', 'Frankenstein''s Mayor'],
   'Custom Scripts': ['Catfishing', 'Deadly Penance Day', 'Hide & Seek', 'Public Executions', 'Tax Fraud'],
   'Empty': []
 }
