@@ -15,6 +15,8 @@ intents.guild_reactions = True
 intents.guild_messages = True
 intents.integrations = True
 
+# Uncomment to enable debugging
+# discord.utils.setup_logging()
 
 class MyClient(discord.Client):
   def __init__(self, *, intents: discord.Intents):
