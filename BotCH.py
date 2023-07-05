@@ -429,14 +429,14 @@ async def slash_schedule(ctx):
   event_time = datetime.combine(d, time(19,0,0,0, tzinfo=ZoneInfo("US/Eastern")))
   cat = discord.utils.get(ctx.guild.categories, name=CATEGORY)
   event = await ctx.guild.create_scheduled_event(
-      name = 'Test event',
-      description = 'please ignore',
+      name = 'Blood on the Clocktower',
+      description = '',
       channel = discord.utils.get(cat.voice_channels, name=LOBBY),
       start_time = event_time,
       privacy_level = discord.PrivacyLevel.guild_only)
   scheduled_channel = discord.utils.get(ctx.guild.text_channels, name='scheduling')
   msg = await scheduled_channel.send(
-      f'@ptarr Testing on Sunday\n{event.url}\n{SCHEDULE_MSG}')
+      f'@everyone Clocktower on Sunday\n{event.url}\n{SCHEDULE_MSG}')
   await msg.add_reaction(OK_EMOJI)
   await msg.add_reaction(LATE_EMOJI)
   await msg.add_reaction(MAYBE_EMOJI)
