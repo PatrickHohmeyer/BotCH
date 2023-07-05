@@ -73,6 +73,11 @@ NIGHT_EMOJI = '🌃'
 MORNING_EMOJI = '🌇'
 SHUSH_EMOJI = '🤫'
 
+OK_EMOJI = '👍'
+LATE_EMOJI = '⏲️'
+MAYBE_EMOJI = '🤔'
+NO_EMOJI = '🙁'
+
 deputy_players = []
 DEPUTY_DIVIDER = 1
 
@@ -401,6 +406,14 @@ async def slash_poll(ctx, base_options : BaseOption, more_options : str = ''):
     await msg.add_reaction(chr(emoji))
     emoji += 1
 
+
+SCHEDULE_MSG='''
+You can also react to this message to indicate "maybe" and "late":
+👍 = "I'm in if we get enough people"
+⏲️ = "I'm in, but I'll be late"
+🤔 = "I might be in but am not sure yet"
+🙁 = "I'm out"'''
+
 @client.botch_group.command(
     name="schedule",
     description="Create an event for Blood on the Clocktower")
@@ -421,6 +434,13 @@ async def slash_schedule(ctx):
       channel = discord.utils.get(cat.voice_channels, name=LOBBY),
       start_time = event_time,
       privacy_level = discord.PrivacyLevel.guild_only)
+  scheduled_channel = discord.utils.get(ctx.guild.text_channels, name='scheduling')
+  msg = await scheduled_channel.send(
+      f'@ptarr Testing on Sunday\n{event.url}\n{SCHEDULE_MSG}')
+  await msg.add_reaction(OK_EMOJI)
+  await msg.add_reaction(LATE_EMOJI)
+  await msg.add_reaction(MAYBE_EMOJI)
+  await msg.add_reaction(NO_EMOJI)
   await send_temp_response(ctx, f'Scheduled {event.url}')
 
 
