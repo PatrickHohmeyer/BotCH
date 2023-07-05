@@ -1,6 +1,8 @@
 import os
 import asyncio
 from typing import Literal
+from datetime import datetime, date, time, timedelta
+from backports.zoneinfo import ZoneInfo
 
 import discord
 from discord import app_commands
@@ -398,6 +400,29 @@ async def slash_poll(ctx, base_options : BaseOption, more_options : str = ''):
   for o in op:
     await msg.add_reaction(chr(emoji))
     emoji += 1
+
+@client.botch_group.command(
+    name="schedule",
+    description="Create an event for Blood on the Clocktower")
+async def slash_schedule(ctx):
+  is_authorized = ((ctx.guild.owner_id == ctx.user.id) or
+    (discord.utils.get(ctx.user.roles, name=STORYTELLER_ROLE) is not None))
+  if not is_authorized:
+    await send_temp_response(ctx, 'You cannot create events with this bot')
+    return
+  d = date.today()
+  delta = 6 - d.weekday() if d.weekday() != 6 else 7
+  d += timedelta(days=delta)
+  event_time = datetime.combine(d, time(19,0,0,0, tzinfo=ZoneInfo("US/Eastern")))
+  cat = discord.utils.get(ctx.guild.categories, name=CATEGORY)
+  event = await ctx.guild.create_scheduled_event(
+      name = 'Test event',
+      description = 'please ignore',
+      channel = discord.utils.get(cat.voice_channels, name=LOBBY),
+      start_time = event_time,
+      privacy_level = discord.PrivacyLevel.guild_only)
+  await send_temp_response(ctx, f'Scheduled {event.url}')
+
 
 loop = asyncio.get_event_loop()
 loop.create_task(client.start(TOKEN))
