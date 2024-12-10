@@ -2,7 +2,7 @@ import os
 import asyncio
 from typing import Literal
 from datetime import datetime, date, time, timedelta
-from backports.zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 
 import discord
 from discord import app_commands
@@ -376,11 +376,12 @@ async def slash_cleanup(ctx):
     await send_temp_response(
         ctx, 'You must send the cleanup command from the control channel.')
 
-BaseOption = Literal['Base editions', 'Teensyville (few)', 'Teensyville (many)', 'Custom Scripts', 'Empty']
+BaseOption = Literal['Base editions', 'Teensyville (few)', 'Teensyville (many)', 'Teensyville (TAP)', 'Custom Scripts', 'Empty']
 BASE_OPTIONS={
   'Base editions': ['Trouble Brewing', 'Sects & Violets', 'Bad Moon Rising'],
   'Teensyville (few)': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom'],
   'Teensyville (many)': ['Trouble Brewing', 'Laissez un Faire', 'No Greater Joy', 'Race to the Bottom', 'Miserable Little Pile of Secrets', 'A Lleech of Distrust', 'On Thin Ice (has twins)', 'Spooky Tea', 'Frankenstein''s Mayor'],
+  'Teensyville (TAP)': ['Yes, Your Immenence', 'Ikebana!', 'Witness Protection', 'Finding Religion', 'Which Script is This Anyway?', 'High Noon (Easy)', 'High Noon (Hard: +Legion)', 'Mirror Mirror', 'Oh No Jo', 'This is Jeopardy!', 'Beauty and the Beasts', 'Demonic Tutor v3', 'Any Idiot May Juggle', 'Good Luck, Sir'],
   'Custom Scripts': ['Catfishing', 'Deadly Penance Day', 'Hide & Seek', 'Public Executions', 'Tax Fraud'],
   'Empty': []
 }
